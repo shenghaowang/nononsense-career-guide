@@ -1,3 +1,5 @@
+from typing import Dict
+
 from loguru import logger
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
@@ -36,24 +38,53 @@ def main(url):
         logger.info(f"Number of jobs: {len(jobs)}")
 
         for job in jobs:
-            extract_job_info(job)
+            job_specs = extract_job_info(job)
+            logger.debug(job_specs)
 
     finally:
         driver.quit()
 
 
-def extract_job_info(job):
+def extract_job_info(job) -> Dict[str, str]:
+    job_specs = {}
+
     jname = job.find_element(By.CLASS_NAME, "jname").text
     cname = job.find_element(By.CLASS_NAME, "cname").text
     time = job.find_element(By.CLASS_NAME, "time").text
     salary = job.find_element(By.CLASS_NAME, "sal").text
-    # location_container = job.find_element(By.CLASS_NAME, "at")
+    # logger.debug(f"{jname} - {cname} - {time} - {salary}")
+    job_specs["job_title"] = jname
+    job_specs["companny_name"] = cname
+    job_specs["post_date"] = time
+    job_specs["salary"] = salary
 
-    # full_location = ""
-    # for loc in location_container.find_elements(By.TAG_NAME, "span"):
-    #     full_location += loc.text
+    job_requirements = ""
+    requirement_container = job.find_element(By.XPATH, "//span[@class='d at']")
+    for requirement in requirement_container.find_elements(By.TAG_NAME, "span"):
+        job_requirements += requirement.text
 
-    logger.debug(f"{jname} - {cname} - {time} - {salary}")
+    # logger.debug(f"job requirement: {job_requirements}")
+    job_specs["requirements"] = job_requirements
+
+    job_tags = []
+    tags_container = job.find_element(By.XPATH, "//p[@class='tags']")
+    for tag in tags_container.find_elements(By.TAG_NAME, "span"):
+        job_tags.append(tag.get_attribute("title"))
+
+    # logger.debug(f"Tags: {'|'.join(job_tags)}")
+    job_specs["tags"] = job_tags
+
+    size_container = job.find_element(By.XPATH, "//p[@class='dc at']")
+    firm_size = size_container.text
+    # logger.debug(f"Firm size: {firm_size}")
+    job_specs["firm_size"] = firm_size
+
+    industry_container = job.find_element(By.XPATH, "//p[@class='int at']")
+    industry = industry_container.text
+    # logger.debug(f"industry: {industry}")
+    job_specs["industry"] = industry
+
+    return job_specs
 
 
 if __name__ == "__main__":
