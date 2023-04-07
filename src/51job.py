@@ -32,28 +32,46 @@ def main(cfg: DictConfig):
     logger.info(driver.title)
 
     try:
-        WebDriverWait(driver, 30).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "j_joblist"))
-        )
 
-        jobs_container = driver.find_elements(By.CLASS_NAME, "j_joblist")
-
-        if not jobs_container:
-            logger.warning("No job is available.")
-
-        jobs_container = jobs_container[0]
-
-        driver.implicitly_wait(30)
-
-        jobs = jobs_container.find_elements(By.CLASS_NAME, "sensors_exposure")
-        logger.info(f"Number of jobs: {len(jobs)}")
-
+        # Declare a list for storing job information
         job_specs = []
-        for job in jobs:
-            job_obj = extract_job_info(job)
-            job_specs.append(job_obj)
 
-            logger.debug(job_obj)
+        for i in range(cfg.max_num_page):
+
+            # Wait until the job list is loaded
+            WebDriverWait(driver, 30).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "j_joblist"))
+            )
+
+            jobs_container = driver.find_elements(By.CLASS_NAME, "j_joblist")
+
+            if not jobs_container:
+                logger.warning("No job is available.")
+
+            jobs_container = jobs_container[0]
+
+            driver.implicitly_wait(30)
+
+            jobs = jobs_container.find_elements(By.CLASS_NAME, "sensors_exposure")
+            logger.info(f"Page No: {i + 1}")
+            logger.info(f"Number of jobs: {len(jobs)}")
+
+            for job in jobs:
+                job_obj = extract_job_info(job)
+                job_specs.append(job_obj)
+
+                logger.debug(job_obj)
+
+            # Turn to next page
+            bottom_page = driver.find_element(By.XPATH, "//div[@class='bottom-page']")
+            next_page_button = bottom_page.find_element(
+                By.XPATH, "//button[@class='btn-next']"
+            )
+
+            if next_page_button.get_attribute("disabled"):
+                break
+
+            next_page_button.click()
 
     finally:
         driver.quit()
